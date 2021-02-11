@@ -19,7 +19,7 @@
 
     <groupId>org.jitsi</groupId>
     <artifactId>jvb-parent</artifactId>
-    <version>2.1-SNAPSHOT</version>
+    <version>2.1-${project.version.suffix}</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -32,6 +32,8 @@
         <spotbugs.version>4.1.4</spotbugs.version>
         <jersey.version>2.32</jersey.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.version.suffix>SNAPSHOT</project.version.suffix>
+        <media.version>1.0-214-gfc6cda2</media.version>
     </properties>
 
     <build>
@@ -104,7 +106,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-media-transform</artifactId>
-                <version>1.0-SNAPSHOT</version>
+                <version>${media.version}</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -122,6 +124,10 @@
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
+        </repository>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/nordeck/jitsi-media-transform</url>
         </repository>
     </repositories>
 
