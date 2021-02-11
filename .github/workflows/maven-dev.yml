@@ -50,14 +50,13 @@ jobs:
         curl -u ${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }} -o ./jvb.zip -L https://maven.pkg.github.com/nordeck/jitsi-videobridge/org/jitsi/jitsi-videobridge/2.1-${{ steps.vars.outputs.sha_short }}/jitsi-videobridge-2.1-${{ steps.vars.outputs.sha_short }}-archive.zip
         7z x ./jvb.zip -o./tmp -r
         mv ./tmp/jitsi-videobridge-2.1-${{ steps.vars.outputs.sha_short }} ./tmp/jvb
-        ls
-    - name: "Build:login"
+    - name: Docker Login
       uses: docker/login-action@v1
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
         password: ${{ secrets.PACKAGE_TOKEN }}
-    - name: "Build:dockerimage"
+    - name: Deploy Docker image
       uses: docker/build-push-action@v2
       with:
         context: .
