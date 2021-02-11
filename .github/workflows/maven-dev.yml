@@ -47,5 +47,6 @@ jobs:
       run: mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/nordeck/jitsi-videobridge -Dmedia.version=${{ github.event.inputs.media-version }}
     - name: Download package
       run: |
-        mvn deploy -DaltDeploymentRepository=snapshot-repo::default::file:./tmp
-        ls ./tmp
+        curl -u ${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }} -o ./tmp/jvb.zip -L https://maven.pkg.github.com/nordeck/jitsi-videobridge/org/jitsi/jitsi-videobridge/2.1-${{ steps.vars.outputs.sha_short }}/jitsi-videobridge-2.1-${{ steps.vars.outputs.sha_short }}-archive.zip
+        7z x ./tmp/jvb.zip -o./tmp/jvb
+        cd ./tmp/jvb/jitsi-videobridge-2.1-${{ steps.vars.outputs.sha_short }}
