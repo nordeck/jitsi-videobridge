@@ -31,13 +31,13 @@ jobs:
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
+    - name: Build with Maven
+      run: ./resources/build.sh
     - name: Update settings.xml
       uses: whelk-io/maven-settings-xml-action@v14
       with:
         repositories: '[{ "id": "github", "url": "https://maven.pkg.github.com/nordeck/jitsi-videobridge" }]'
         servers: '[{ "id": "github", "username": "${{ github.repository_owner }}", "password": "${{ secrets.GITHUB_TOKEN }}" }]'
-    - name: Build with Maven
-      run: ./resources/build.sh
     - name: Set output vars
       id: vars
       run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
