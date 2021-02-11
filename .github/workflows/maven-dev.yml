@@ -31,6 +31,13 @@ jobs:
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
+    - name: Set output vars
+      id: vars
+      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+    - name: Set pom version
+      run: |
+        mvn versions:set -DnewVersion=2.1-${{ steps.vars.outputs.sha_short }}
+        mvn versions:commit
     - name: Build with Maven
       run: ./resources/build.sh
     - name: Update settings.xml
@@ -38,8 +45,5 @@ jobs:
       with:
         repositories: '[{ "id": "github", "url": "https://maven.pkg.github.com/nordeck/jitsi-videobridge" }]'
         servers: '[{ "id": "github", "username": "${{ github.repository_owner }}", "password": "${{ secrets.GITHUB_TOKEN }}" }]'
-    - name: Set output vars
-      id: vars
-      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
     - name: Deploy with Maven
       run: mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/nordeck/jitsi-videobridge -Dproject.version.suffix=${{ steps.vars.outputs.sha_short }} -Dmedia-version=${{ github.event.inputs.media-version }}
