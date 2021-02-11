@@ -49,3 +49,5 @@ jobs:
       run: |
         mvn dependency:get -DgroupId=org.jitsi -DartifactId=jitsi-videobridge -Dversion=2.1-${{ steps.vars.outputs.sha_short }} -Dpackaging=jar -DremoteRepositories=central::default::https://maven.pkg.github.com/nordeck/jitsi-videobridge -Ddest=./tmp/test.zip
         ls ./tmp
+        7z x ./tmp/test.zip
+        ls ./tmp
