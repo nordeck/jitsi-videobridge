@@ -38,12 +38,10 @@ jobs:
       run: |
         mvn versions:set -DnewVersion=2.1-${{ steps.vars.outputs.sha_short }}
         mvn versions:commit
-    - name: Build with Maven
-      run: ./resources/build.sh
     - name: Update settings.xml
       uses: whelk-io/maven-settings-xml-action@v14
       with:
         repositories: '[{ "id": "github", "url": "https://maven.pkg.github.com/nordeck/jitsi-videobridge" }]'
         servers: '[{ "id": "github", "username": "${{ github.repository_owner }}", "password": "${{ secrets.GITHUB_TOKEN }}" }]'
     - name: Deploy with Maven
-      run: mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/nordeck/jitsi-videobridge -Dproject.version.suffix=${{ steps.vars.outputs.sha_short }} -Dmedia.version=${{ github.event.inputs.media-version }}
+      run: mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/nordeck/jitsi-videobridge -Dmedia.version=${{ github.event.inputs.media-version }}
