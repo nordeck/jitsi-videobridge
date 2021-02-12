@@ -18,7 +18,6 @@
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
-    <project.version.suffix>SNAPSHOT</project.version.suffix>
   </properties>
 
   <profiles>

@@ -32,7 +32,6 @@
         <spotbugs.version>4.1.4</spotbugs.version>
         <jersey.version>2.32</jersey.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.version.suffix>SNAPSHOT</project.version.suffix>
         <media.version>1.0-214-gfc6cda2</media.version>
     </properties>
 
