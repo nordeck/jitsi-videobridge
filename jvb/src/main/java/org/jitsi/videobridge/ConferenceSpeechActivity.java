@@ -103,6 +103,11 @@ public class ConferenceSpeechActivity
                         parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
+        int numLoudestToTrack = LoudestConfig.Companion.getRouteLoudestOnly() ?
+                LoudestConfig.Companion.getNumLoudest() : 0;
+        dominantSpeakerIdentification.setLoudestConfig(numLoudestToTrack,
+                (int)(LoudestConfig.Companion.getEnergyExpireTime().toMillis()),
+                LoudestConfig.Companion.getEnergyAlphaPct());
     }
 
     /**
@@ -160,13 +165,13 @@ public class ConferenceSpeechActivity
     {
         synchronized (syncRoot)
         {
-            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
+            Map<Boolean, List<AbstractEndpoint>> byVideoAvailable
                     = endpointsBySpeechActivity.stream()
-                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
+                        .collect(Collectors.groupingBy(ep -> ep.getVideoType() != VideoType.NONE));
 
             List<AbstractEndpoint> newEndpointsInLastNOrder = new ArrayList<>(endpointsBySpeechActivity.size());
-            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
-            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
+            newEndpointsInLastNOrder.addAll(byVideoAvailable.getOrDefault(true, Collections.emptyList()));
+            newEndpointsInLastNOrder.addAll(byVideoAvailable.getOrDefault(false, Collections.emptyList()));
 
             if (!newEndpointsInLastNOrder.equals(endpointsInLastNOrder))
             {
@@ -259,6 +264,11 @@ public class ConferenceSpeechActivity
         return false;
     }
 
+    public DominantSpeakerIdentification<String>.SpeakerRanking getRanking(String endpointId)
+    {
+        return dominantSpeakerIdentification.getRanking(endpointId);
+    }
+
     /**
      * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
@@ -324,6 +334,28 @@ public class ConferenceSpeechActivity
                 if (finalEndpointsChanged)
                 {
                     listener.lastNEndpointsChanged();
+                }
+            });
+        }
+    }
+
+    public void endpointVideoAvailabilityChanged()
+    {
+        boolean endpointsListChanged;
+        synchronized (syncRoot)
+        {
+            endpointsListChanged = updateLastNEndpoints();
+        }
+        if (endpointsListChanged)
+        {
+            TaskPools.IO_POOL.submit(() -> {
+                try
+                {
+                    listener.lastNEndpointsChanged();
+                }
+                catch (Throwable e)
+                {
+                    logger.warn("Failed to fire event", e);
                 }
             });
         }

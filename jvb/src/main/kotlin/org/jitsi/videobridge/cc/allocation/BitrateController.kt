@@ -21,13 +21,14 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.utils.event.EventEmitter
+import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
+import org.jitsi.videobridge.util.VideoType
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
@@ -50,7 +51,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    val eventEmitter = EventEmitter<EventHandler>()
+    val eventEmitter = SyncEventEmitter<EventHandler>()
 
     private val bitrateAllocatorEventHandler = BitrateAllocatorEventHandler()
     /**
@@ -212,7 +213,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         allocation.allocations.forEach {
             it.targetLayer?.getBitrate(nowMs)?.let { targetBitrate ->
                 totalTargetBitrate += targetBitrate
-                it.source?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
+                it.endpoint.mediaSource?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
             }
             it.idealLayer?.getBitrate(nowMs)?.let { idealBitrate ->
                 totalIdealBitrate += idealBitrate
@@ -244,7 +245,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             trace(
                 diagnosticContext
                     .makeTimeSeriesPoint("allocation_for_source", nowMs)
-                    .addField("remote_endpoint_id", it.endpointId)
+                    .addField("remote_endpoint_id", it.endpoint.id)
                     .addField("target_idx", it.targetLayer?.index ?: -1)
                     .addField("ideal_idx", it.idealLayer?.index ?: -1)
                     .addField("target_bps", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)
@@ -283,13 +284,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             val newForwardedEndpoints = allocation.forwardedEndpoints
             if (forwardedEndpoints != newForwardedEndpoints) {
                 forwardedEndpoints = newForwardedEndpoints
-                eventEmitter.fireEventSync { forwardedEndpointsChanged(newForwardedEndpoints) }
+                eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
             }
 
             oversendingTimeTracker.setState(allocation.oversending)
 
             // TODO: this is for testing only. Should we change the tests to work with [BitrateAllocator] directly?
-            eventEmitter.fireEventSync { allocationChanged(allocation) }
+            eventEmitter.fireEvent { allocationChanged(allocation) }
         }
 
         override fun effectiveVideoConstraintsChanged(
@@ -297,7 +298,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             newEffectiveConstraints: Map<String, VideoConstraints>
         ) {
             // Forward to the outer EventHandler.
-            eventEmitter.fireEventSync {
+            eventEmitter.fireEvent {
                 effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
             }
         }
@@ -309,7 +310,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
  */
 interface MediaSourceContainer {
     val id: String
-    val mediaSources: Array<MediaSourceDesc>?
+    val videoType: VideoType
+    val mediaSource: MediaSourceDesc?
 }
 
 data class BitrateControllerStatusSnapshot(

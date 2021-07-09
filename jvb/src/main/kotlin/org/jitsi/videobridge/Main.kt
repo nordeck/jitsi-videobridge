@@ -31,6 +31,7 @@ import org.jitsi.rest.servletContextHandler
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
@@ -67,22 +68,28 @@ fun main(args: Array<String>) {
     // Before initializing the application programming interfaces (APIs) of
     // Jitsi Videobridge, set any System properties which they use and which
     // may be specified by the command-line arguments.
-    System.setProperty(
-        Videobridge.REST_API_PNAME,
-        cmdLine.getOptionValue("--apis").contains(Videobridge.REST_API).toString()
-    )
+    cmdLine.getOptionValue("--apis")?.let {
+        System.setProperty(
+            Videobridge.REST_API_PNAME,
+            it.contains(Videobridge.REST_API).toString()
+        )
+    }
 
     // Reload the Typesafe config used by ice4j, because the original was initialized before the new system
     // properties were set.
     JitsiConfig.reloadNewConfig()
 
+    val versionService = JvbVersionService().also {
+        logger.info("Starting jitsi-videobridge version ${it.currentVersion}")
+    }
+
     startIce4j()
 
     XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.jidCacheSize)
+    PacketQueue.setEnableStatisticsDefault(true)
 
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
-    val versionService = JvbVersionService()
     val videobridge = Videobridge(xmppConnection, shutdownService, versionService.currentVersion).apply { start() }
     val healthChecker = JvbHealthChecker().apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }

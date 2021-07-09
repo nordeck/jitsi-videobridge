@@ -15,9 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation;
 
-import org.jitsi.nlj.MediaSourceDesc;
-import org.jitsi.nlj.RtpLayerDesc;
-import org.jitsi.nlj.util.*;
+import org.jitsi.nlj.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.config.*;
 
@@ -41,20 +39,12 @@ class SingleSourceAllocation
      */
     private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
 
-    /**
-     * The ID of the {@code Endpoint} that this instance pertains to.
-     */
-    private final String endpointId;
+    final MediaSourceContainer endpoint;
 
     /**
      * The constraints to use while allocating bandwidth to this endpoint.
      */
     final VideoConstraints constraints;
-
-    /**
-     * The {@link MediaSourceDesc} that this instance pertains to.
-     */
-    private final MediaSourceDesc source;
 
     /**
      * An array that holds the layers to be considered when allocating bandwidth.
@@ -75,18 +65,17 @@ class SingleSourceAllocation
     int targetIdx = -1;
 
     SingleSourceAllocation(
-            String endpointId,
-            MediaSourceDesc source,
+            MediaSourceContainer endpoint,
             VideoConstraints constraints,
             boolean onStage,
             DiagnosticContext diagnosticContext,
             Clock clock)
     {
-        this.endpointId = endpointId;
+        this.endpoint = endpoint;
         this.constraints = constraints;
-        this.source = source;
         this.onStage = onStage;
 
+        MediaSourceDesc source = endpoint.getMediaSource();
         if (source == null || constraints.getMaxHeight() <= 0)
         {
             preferredIdx = -1;
@@ -133,7 +122,8 @@ class SingleSourceAllocation
 
             boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
             boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getMaxHeight();
-            boolean atLeastPreferredFps = layer.getFrameRate() >= preferredFps;
+            // If frame rate is unknown, consider it to be sufficient.
+            boolean atLeastPreferredFps = layer.getFrameRate() < 0 || layer.getFrameRate() >= preferredFps;
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
@@ -162,11 +152,13 @@ class SingleSourceAllocation
         {
             DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
                     = diagnosticContext.makeTimeSeriesPoint("layers_considered")
-                        .addField("remote_endpoint_id", endpointId);
+                        .addField("remote_endpoint_id", endpoint.getId());
             for (LayerSnapshot layerSnapshot : ratesList)
             {
+                RtpLayerDesc l = layerSnapshot.layer;
                 ratesTimeSeriesPoint.addField(
-                        layerSnapshot.layer.getHeight() + "p_" + layerSnapshot.layer.getFrameRate() + "fps_bps",
+                        RtpLayerDesc.indexString(l.getIndex()) +
+                            "_" + l.getHeight() + "p_" + l.getFrameRate() + "fps_bps",
                         layerSnapshot.bitrate);
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
@@ -233,6 +225,14 @@ class SingleSourceAllocation
     }
 
     /**
+     * The source is suspended if we've not selected a layer AND the source has active layers.
+     */
+    boolean isSuspended()
+    {
+        return targetIdx == -1 && layers.length > 0 && layers[0].bitrate > 0;
+    }
+
+    /**
      * Gets the target bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the currently chosen layer.
      */
     long getTargetBitrate()
@@ -274,8 +274,7 @@ class SingleSourceAllocation
         LayerSnapshot targetLayer = getTargetLayer();
         LayerSnapshot idealLayer = getIdealLayer();
         return new SingleAllocation(
-                endpointId,
-                source,
+                endpoint,
                 targetLayer == null ? null : targetLayer.layer,
                 idealLayer == null ? null : idealLayer.layer
         );
@@ -283,7 +282,7 @@ class SingleSourceAllocation
 
     @Override
     public String toString() {
-        return "[id=" + endpointId
+        return "[id=" + endpoint.getId()
                 + " constraints=" + constraints
                 + " ratedPreferredIdx=" + preferredIdx
                 + " ratedTargetIdx=" + targetIdx;
